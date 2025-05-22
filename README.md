@@ -9,8 +9,19 @@ This template should help get you started developing with Vue 3 in Vite.
 ## Python dependencies
 
 ```sh
-pip install gpt4all
+pip install gpt4all pytesseract pillow
 ```
+Install tesseract-ocr:
+mac:
+```sh
+brew install tesseract
+```
+Linux: (apt distros)
+```sh
+sudo apt install tesseract-ocr
+```
+Windows:
+https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe
 
 ## Customize configuration
 
