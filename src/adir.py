@@ -36,7 +36,7 @@ def verify_sol(text: str) -> bool:
     return answer == 'YES'
 
 
-def generateQuestion(category : str, american: bool) -> str:
+def generateQuestion(category : str, hebrew: bool) -> str:
     with model.chat_session():
         if not hebrew:
             question = model.generate("generate SAT "+category+" question.", max_tokens=1024)
