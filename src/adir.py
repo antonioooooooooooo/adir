@@ -7,7 +7,6 @@ import pytesseract
 
 model = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf")
 
-def generateQuestion(category: str, hebrew: bool) -> str:
 curr_dir = Path.cwd()
 img_path = curr_dir / "assets" / "test.png"
 test_path = curr_dir / "assets" / "test.png"
