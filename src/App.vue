@@ -1,12 +1,16 @@
 <script setup>
   import { ref } from 'vue';
 
+  const API_BASE_URL = 'http://localhost:5001/api';
+
   const selectedTopic = ref('calculus');
   const currentQuestion = ref('');
   const showSolution = ref(false);
   const hints = ref([]);
   const messages = ref([]);
   const userMessage = ref('');
+  const isLoading = ref(false);
+  const solution = ref('');
 
   const topics = [
     { id: 'calculus', name: 'חשבון דיפרנציאלי ואינטגרלי' },
@@ -16,34 +20,119 @@
     { id: 'series', name: 'סדרות' },
   ];
 
-  const generateQuestion = () => {
-    // TODO: Implement API call to generate question
-    currentQuestion.value = 'שאלה לדוגמה - תוחלף בתוכן שייווצר על ידי בינה מלאכותית';
-    showSolution.value = false;
-    hints.value = [];
+  const generateQuestion = async () => {
+    try {
+      isLoading.value = true;
+      const response = await fetch(`${API_BASE_URL}/question`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category: selectedTopic.value,
+          hebrew: true,
+        }),
+      });
+      const data = await response.json();
+      console.log(data.question);
+      currentQuestion.value = data.question;
+      showSolution.value = false;
+      hints.value = [];
+      solution.value = '';
+    } catch (error) {
+      console.error('Error generating question:', error);
+      currentQuestion.value = 'שגיאה ביצירת השאלה. אנא נסה שוב.';
+    } finally {
+      isLoading.value = false;
+    }
   };
 
-  const requestHint = () => {
-    // TODO: Implement API call to get hint
-    hints.value.push('רמז לדוגמה - יוחלף בתוכן שייווצר על ידי בינה מלאכותית');
+  const requestHint = async () => {
+    try {
+      isLoading.value = true;
+      const response = await fetch(`${API_BASE_URL}/hint`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: currentQuestion.value,
+        }),
+      });
+      const data = await response.json();
+      hints.value.push(data.hint);
+    } catch (error) {
+      console.error('Error getting hint:', error);
+      hints.value.push('שגיאה בקבלת הרמז. אנא נסה שוב.');
+    } finally {
+      isLoading.value = false;
+    }
   };
 
-  const toggleSolution = () => {
+  const toggleSolution = async () => {
+    if (!showSolution.value && !solution.value) {
+      try {
+        isLoading.value = true;
+        const response = await fetch(`${API_BASE_URL}/solution`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: currentQuestion.value,
+            explain: true,
+          }),
+        });
+        const data = await response.json();
+        solution.value = data.solution;
+      } catch (error) {
+        console.error('Error getting solution:', error);
+        solution.value = 'שגיאה בקבלת הפתרון. אנא נסה שוב.';
+      } finally {
+        isLoading.value = false;
+      }
+    }
     showSolution.value = !showSolution.value;
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (userMessage.value.trim()) {
+      const userMsg =
+        'This is the question the user is trying to solve for context:\n' +
+        currentQuestion.value +
+        '\nAnd this is their message:\n' +
+        userMessage.value;
       messages.value.push({
-        text: userMessage.value,
+        text: userMsg,
         isUser: true,
       });
-      // TODO: Implement API call to get response
-      messages.value.push({
-        text: 'תשובת המערכת תופיע כאן',
-        isUser: false,
-      });
       userMessage.value = '';
+
+      try {
+        isLoading.value = true;
+        const response = await fetch(`${API_BASE_URL}/hint`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            question: userMsg,
+          }),
+        });
+        const data = await response.json();
+        messages.value.push({
+          text: data.hint,
+          isUser: false,
+        });
+      } catch (error) {
+        console.error('Error getting response:', error);
+        messages.value.push({
+          text: 'שגיאה בקבלת תשובה. אנא נסה שוב.',
+          isUser: false,
+        });
+      } finally {
+        isLoading.value = false;
+      }
     }
   };
 </script>
@@ -68,9 +157,10 @@
             </select>
             <button
               @click="generateQuestion"
-              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              :disabled="isLoading"
+              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
             >
-              צור שאלה חדשה
+              {{ isLoading ? 'טוען...' : 'צור שאלה חדשה' }}
             </button>
           </div>
         </div>
@@ -79,22 +169,24 @@
         <div class="lg:col-span-2">
           <div class="bg-white rounded-lg shadow p-6 mb-6">
             <h2 class="text-xl font-semibold mb-4">שאלה נוכחית</h2>
-            <div class="bg-gray-50 p-4 rounded-md mb-4">
+            <div class="bg-gray-50 p-4 rounded-md mb-4 whitespace-pre-line">
               {{ currentQuestion || 'לחץ על "צור שאלה חדשה" כדי להתחיל' }}
             </div>
 
             <div class="flex gap-4 mb-6">
               <button
                 @click="requestHint"
-                class="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                :disabled="isLoading || !currentQuestion"
+                class="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400"
               >
-                קבל רמז
+                {{ isLoading ? 'טוען...' : 'קבל רמז' }}
               </button>
               <button
                 @click="toggleSolution"
-                class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors"
+                :disabled="isLoading || !currentQuestion"
+                class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-400"
               >
-                {{ showSolution ? 'הסתר פתרון' : 'הצג פתרון' }}
+                {{ isLoading ? 'טוען...' : showSolution ? 'הסתר פתרון' : 'הצג פתרון' }}
               </button>
             </div>
 
@@ -111,7 +203,7 @@
             <!-- Solution Section -->
             <div v-if="showSolution" class="mb-6">
               <h3 class="font-semibold mb-2">פתרון:</h3>
-              <div class="bg-gray-50 p-4 rounded-md">פתרון מפורט יופיע כאן</div>
+              <div class="bg-gray-50 p-4 rounded-md whitespace-pre-line">{{ solution }}</div>
             </div>
 
             <!-- Chat Section -->
@@ -134,15 +226,17 @@
                 <input
                   v-model="userMessage"
                   @keyup.enter="sendMessage"
+                  :disabled="isLoading"
                   type="text"
                   placeholder="הקלד את שאלתך כאן..."
                   class="flex-1 p-2 border rounded-md"
                 />
                 <button
                   @click="sendMessage"
-                  class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                  :disabled="isLoading"
+                  class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
                 >
-                  שלח
+                  {{ isLoading ? 'שולח...' : 'שלח' }}
                 </button>
               </div>
             </div>
