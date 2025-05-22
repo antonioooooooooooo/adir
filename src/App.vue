@@ -1,9 +1,10 @@
 <script setup>
   import { ref } from 'vue';
+  import SolutionUpload from './components/SolutionUpload.vue';
 
   const API_BASE_URL = 'http://localhost:5001/api';
 
-  const selectedTopic = ref('calculus');
+  const selectedTopic = ref('traffic');
   const currentQuestion = ref('');
   const showSolution = ref(false);
   const hints = ref([]);
@@ -13,11 +14,12 @@
   const solution = ref('');
 
   const topics = [
-    { id: 'calculus', name: 'חשבון דיפרנציאלי ואינטגרלי' },
-    { id: 'complex', name: 'מספרים מרוכבים' },
-    { id: 'trigonometry', name: 'טריגונומטריה' },
-    { id: 'probability', name: 'הסתברות וסטטיסטיקה' },
+    { id: 'traffic', name: 'בעיות תנועה' },
     { id: 'series', name: 'סדרות' },
+    { id: 'probability', name: 'הסתברות' },
+    { id: 'geometry', name: 'גיאומטריה' },
+    { id: 'trigonometry', name: 'טריגונומטריה' },
+    { id: 'calculus', name: 'חשבון דיפרנציאלי ואינטגרלי' },
   ];
 
   const generateQuestion = async () => {
@@ -204,6 +206,12 @@
             <div v-if="showSolution" class="mb-6">
               <h3 class="font-semibold mb-2">פתרון:</h3>
               <div class="bg-gray-50 p-4 rounded-md whitespace-pre-line">{{ solution }}</div>
+            </div>
+
+            <!-- Solution Upload Section -->
+            <div v-if="currentQuestion" class="border-t pt-6 mb-6">
+              <h3 class="font-semibold mb-4">העלה את הפתרון שלך</h3>
+              <SolutionUpload />
             </div>
 
             <!-- Chat Section -->

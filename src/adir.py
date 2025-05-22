@@ -1,10 +1,10 @@
 from gpt4all import GPT4All
-from nomic import embed
 from pathlib import Path
 from PIL import Image
 import pytesseract
-#model = GPT4All("orca-mini-3b-gguf2-q4_0.gguf")
+from questions_by_topic import questions_by_topic
 
+# if not works run "pip install --upgrade gpt4all"
 model = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf")
 
 curr_dir = Path.cwd()
@@ -16,7 +16,7 @@ test_path = curr_dir / "assets" / "test.png"
 
 def ocr_to_text(path: str) -> str:
     # Optional: set path to tesseract binary if not in PATH (Windows) ### ANNOTATE IF NOT IN WINDOWS
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
     # Load image
     #img_path = Path("assets/pool.jpeg")
@@ -43,34 +43,15 @@ def generateQuestion(category : str, hebrew: bool) -> str:
         else:
             question = model.generate(
                 "Generate a maths question in the category: " + category +
-                ", in the style of the israeli SAT exam \"5 unit bagrut\". Here is a question for example: " +
-                "נתונה סדרה הנדסית A שאיבריה הם 3 2 1 ... , a , ,a a , ובה m איברים )m הוא מספר טבעי גדול מ־ 4(.\n" +
-                "נתון: כל איברי הסדרה A הם שליליים.\n" +
-                "סכום - 4 m האיברים האחרונים בסדרה הוא פי 16 מסכום - 4 m האיברים הראשונים בסדרה.\n" +
-                "א. )1( מצאו את מנת הסדרה A .\n" +
-                ")2( האם הסדרה A עולה, יורדת או לא עולה ולא יורדת? נמקו את תשובתכם.\n" +
-                "המשיכו את הסדרה A כך שנוצרה סדרה הנדסית אין־סופית.\n" +
-                "a b לכל n טבעי. k הוא פרמטר שונה מ־ 0 .\n" +
-                "n n k\n" +
-                "n\n" +
-                "נתונה סדרה אין־סופית B שאיבריה מקיימים =\n" +
-                "ב. הוכיחו כי הסדרה B היא סדרה הנדסית, והביעו את המנה שלה באמצעות k .\n" +
-                "נתון כי סכום הסדרה B מתכנס.\n" +
-                "ג. מצאו את תחום הערכים האפשרי של k .\n" +
-                "4 .\n" +
-                "1\n" +
-                "נתון: מנת הסדרה B היא\n" +
-                "סכום הסדרה B הוא 9 - .\n" +
-                "ד. מצאו את הערך של k ואת הערך של 1b .\n" +
-                "בסדרה B מחקו כל איבר שלישי 9 6 3 (... b , b b , ( .\n" +
-                "ה. מצאו את סכום האיברים הנותרים.\n" +
+                ", in the style of the israeli SAT exam \"5 unit bagrut\". Here is are some questions for example: " +
+                "\n".join(questions_by_topic[category]) +
                 "Please write it only in hebrew (no english at all) with no additional text (only the question).\n" +
                 "If there are several parts to the question (for example questions א,ב,ג), make sure to write them on different lines.\n" +
                 "Please note that if there are several parts, the first one must be א, second must be ב, third must be ג and so on.",
                 max_tokens=1024
             )
 
-        return question
+    return question
 
 def requestHint(question: str):
     with model.chat_session():
