@@ -2,8 +2,35 @@
   <div class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
     <h2 class="text-2xl font-bold mb-4">בדוק את הפיתרון שלך</h2>
 
+    <div class="mb-4">
+      <div class="flex space-x-4 space-x-reverse">
+        <button
+          @click="inputType = 'file'"
+          :class="[
+            'px-4 py-2 rounded-md',
+            inputType === 'file'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          ]"
+        >
+          העלאת תמונה
+        </button>
+        <button
+          @click="inputType = 'text'"
+          :class="[
+            'px-4 py-2 rounded-md',
+            inputType === 'text'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          ]"
+        >
+          הקלדת תשובה
+        </button>
+      </div>
+    </div>
+
     <form @submit.prevent="handleSubmit" class="space-y-4">
-      <div class="space-y-2">
+      <div v-if="inputType === 'file'" class="space-y-2">
         <label class="block text-sm font-medium text-gray-700">העלה את קובץ הפיתרון שלך</label>
         <input
           type="file"
@@ -13,12 +40,22 @@
         />
       </div>
 
+      <div v-else class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">הקלד את התשובה שלך</label>
+        <input
+          type="text"
+          v-model="textAnswer"
+          class="w-full p-2 border border-gray-300 rounded-md"
+          placeholder="הקלד את תשובתך כאן"
+        />
+      </div>
+
       <button
         type="submit"
-        :disabled="loading || !file"
+        :disabled="loading || (!file && !textAnswer)"
         :class="[
           'w-full py-2 px-4 rounded-md text-white font-medium',
-          loading || !file ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
+          loading || (!file && !textAnswer) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
         ]"
       >
         {{ loading ? 'בודק...' : 'בדוק פיתרון' }}
@@ -57,6 +94,8 @@
     data() {
       return {
         file: null,
+        textAnswer: '',
+        inputType: 'file',
         result: null,
         loading: false,
         error: null,
@@ -72,8 +111,13 @@
         }
       },
       async handleSubmit() {
-        if (!this.file) {
+        if (this.inputType === 'file' && !this.file) {
           this.error = 'Please select a file first';
+          return;
+        }
+
+        if (this.inputType === 'text' && !this.textAnswer.trim()) {
+          this.error = 'Please enter your answer';
           return;
         }
 
@@ -81,7 +125,13 @@
         this.error = null;
 
         const formData = new FormData();
-        formData.append('solution', this.file);
+        if (this.inputType === 'file') {
+          formData.append('solution', this.file);
+          formData.append('type', 'file');
+        } else {
+          formData.append('solution', this.textAnswer.trim());
+          formData.append('type', 'text');
+        }
 
         try {
           const response = await fetch('http://localhost:5001/api/verify-solution', {

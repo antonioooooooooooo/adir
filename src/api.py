@@ -45,37 +45,58 @@ def get_solution():
 
 @app.route('/api/verify-solution', methods=['POST'])
 def verify_solution():
-    if 'solution' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
+    solution_type = request.form.get('type', 'file')
     
-    file = request.files['solution']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+    if solution_type == 'file':
+        if 'solution' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['solution']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            try:
+                # Extract text from the image
+                extracted_text = ocr_to_text(filepath)
+                # Verify the solution
+                is_correct = verify_sol(extracted_text)
+                
+                # Clean up the uploaded file
+                os.remove(filepath)
+                
+                return jsonify({
+                    'isCorrect': is_correct,
+                    'extractedText': extracted_text
+                })
+            except Exception as e:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                return jsonify({'error': str(e)}), 500
+        
+        return jsonify({'error': 'Invalid file type'}), 400
     
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    elif solution_type == 'text':
+        solution_text = request.form.get('solution')
+        if not solution_text:
+            return jsonify({'error': 'No text solution provided'}), 400
         
         try:
-            # Extract text from the image
-            extracted_text = ocr_to_text(filepath)
-            # Verify the solution
-            is_correct = verify_sol(extracted_text)
-            
-            # Clean up the uploaded file
-            os.remove(filepath)
+            # Verify the text solution directly
+            is_correct = verify_sol(solution_text)
             
             return jsonify({
                 'isCorrect': is_correct,
-                'extractedText': extracted_text
+                'extractedText': solution_text
             })
         except Exception as e:
-            if os.path.exists(filepath):
-                os.remove(filepath)
             return jsonify({'error': str(e)}), 500
     
-    return jsonify({'error': 'Invalid file type'}), 400
+    return jsonify({'error': 'Invalid solution type'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
